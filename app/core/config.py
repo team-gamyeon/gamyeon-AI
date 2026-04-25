@@ -49,7 +49,15 @@ class Settings(BaseSettings):
         "http://spring-server:8080/internal/v1/questions/callback"
     )
 
+    # feedback LLM 설정
+    FEEDBACK_LLM_MODEL: str = "gpt-4o-mini"
+    FEEDBACK_LLM_TIMEOUT_SEC: int = 20
+    FEEDBACK_LLM_CONCURRENCY: int = 3
+    RELIABILITY_THRESHOLD: int = 50
+    FEEDBACK_SPRING_WEBHOOK_URL: str = "http://localhost:8080/dummy"
+
     OPENAI_API_KEY: str = ""
+
 
 
 settings = Settings()

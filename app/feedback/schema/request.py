@@ -2,13 +2,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 
-# schema/request.py (이벤트 수신 모델)
 class KeywordCandidate(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     term: str
     count: int
     category: str
@@ -16,23 +11,21 @@ class KeywordCandidate(BaseModel):
 
 class TranscriptInfo(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    raw_transcript: str
-    phonetic_transcript: str
-    corrected_transcript: str
-    # corrections, word_timestamps는 현재 피드백 생성에 불필요하면 Optional 처리
+    raw_transcript: str = ""
+    phonetic_transcript: str = ""
+    corrected_transcript: str = ""
     corrections: list = []
     word_timestamps: list = []
 
 
 class KeywordsInfo(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    candidates: list[KeywordCandidate]
+    candidates: list[KeywordCandidate] = []
 
 
 class GazeInfo(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    gaze_score: int = 0  # None 수신 시 0으로 정규화
+    gaze_score: int = 0
 
     @field_validator("gaze_score", mode="before")
     @classmethod
@@ -42,13 +35,23 @@ class GazeInfo(BaseModel):
 
 class TimeInfo(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    time_score: int
-    answer_duration_ms: int
+    time_score: int = 0
+    answer_duration_ms: int = 0
+
+    @field_validator("time_score", "answer_duration_ms", mode="before")
+    @classmethod
+    def normalize_none(cls, v: int | None) -> int:
+        return 0 if v is None else v
 
 
 class ReliabilityInfo(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    score: int
+    score: int = 0
+
+    @field_validator("score", mode="before")
+    @classmethod
+    def normalize_none(cls, v: int | None) -> int:
+        return 0 if v is None else v
 
 
 class FeedbackEventRequest(BaseModel):
@@ -60,13 +63,10 @@ class FeedbackEventRequest(BaseModel):
     status: str
     degraded: bool
     transcript: TranscriptInfo
-    keywords: KeywordsInfo
-    gaze: GazeInfo
-    time: TimeInfo
-    reliability: ReliabilityInfo
-
-
-# ── 내부 LLM 어댑터 입력 모델 (service → adapter) ───────────────
+    keywords: KeywordsInfo = KeywordsInfo()
+    gaze: GazeInfo = GazeInfo()
+    time: TimeInfo = TimeInfo()
+    reliability: ReliabilityInfo = ReliabilityInfo()
 
 
 class FeedbackRequest(BaseModel):

@@ -1,17 +1,12 @@
+import asyncio
 import logging
-import os
-import uuid
 from contextlib import asynccontextmanager
 
-logger = logging.getLogger(__name__)
-
-import consul
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.core import ConsulHelper
 from app.core.logging_config import setup_logging
 from app.core.schema import ApiResponse
 from app.feedback.infrastructure.di import get_feedback_service
@@ -24,41 +19,34 @@ from app.report.router import router as report_router
 load_dotenv()
 setup_logging()
 
-# Configuration about consul client
-consul_host = os.getenv("CONSUL_HOST", "localhost")
-c = consul.Consul(host=consul_host, port=8500)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    consul_helper = ConsulHelper(host="consul")
-    config = consul_helper.get_config("config/agent/settings")
-
-    SERVICE_ID = config.get("SERVICE_ID", "DEFAULT-SERVER")
-    EXTERNAL_HOST_IP = config.get("EXTERNAL_HOST_IP", "127.0.0.1")
-    EC2_PUBLIC_IP = config.get("EC2_PUBLIC_IP", "0.0.0.0")
-
-    # UUID를 사용하여 매번 다른 ID 생성
-    unique_id = f"{SERVICE_ID}:{uuid.uuid4()}"
-
-    c.agent.service.register(
-        name=SERVICE_ID,
-        service_id=unique_id,
-        address=EXTERNAL_HOST_IP,
-        port=8000,
-        check=consul.Check.http(f"http://{EC2_PUBLIC_IP}:8000/health", interval="10s"),
-    )
-    print("Consul 등록 완료")
-
-    # ✅ 피드백 이벤트 리스너 등록 (추가되는 유일한 부분)
     feedback_service = get_feedback_service()
     register_feedback_listeners(feedback_service)
-    print("✅ 피드백 이벤트 리스너 등록 완료")
+    logger.info("feedback_event_listeners_registered")
 
-    yield  # 서버 실행
+    yield  # 서버 실행 중
 
-    c.agent.service.deregister(SERVICE_ID)
-    print("Consul 등록 해제")
+    # graceful shutdown — 진행 중인 BackgroundTasks 완료 대기.
+    # BackgroundTasks는 인메모리이므로 프로세스가 즉시 종료되면 콜백이 유실된다.
+    pending_tasks = [
+        t for t in asyncio.all_tasks()
+        if not t.done() and t is not asyncio.current_task()
+    ]
+    if pending_tasks:
+        logger.info(
+            "graceful_shutdown_wait pending_tasks=%d timeout=30s",
+            len(pending_tasks),
+        )
+        done, still_pending = await asyncio.wait(pending_tasks, timeout=30)
+        if still_pending:
+            logger.warning(
+                "graceful_shutdown_timeout tasks_not_completed=%d",
+                len(still_pending),
+            )
 
 
 app = FastAPI(
@@ -69,17 +57,13 @@ app = FastAPI(
 )
 
 
-# ── 헬스체크 ─────────────────────────────────────────────────────
-
-
+# -- 헬스체크 ----------------------------------------------------------------
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "AI server is running"}
 
 
-# ── 전역 예외 핸들러 ─────────────────────────────────────────────
-
-
+# -- 전역 예외 핸들러 ---------------------------------------------------------
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = [
@@ -87,8 +71,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         for e in exc.errors()
     ]
     logger.warning(
-        "422 validation error url=%s errors=%s",
-        request.url.path, errors,
+        "validation_error url=%s errors=%s",
+        request.url.path,
+        errors,
     )
     return JSONResponse(
         status_code=422,
@@ -103,6 +88,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # BackgroundTasks 내부 예외는 이 핸들러에 도달하지 않는다.
+    # 라우터 레벨에서 발생한 예상치 못한 예외만 여기서 처리된다.
+    logger.error(
+        "unhandled_exception url=%s error=%s",
+        request.url.path,
+        str(exc),
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=500,
         content=ApiResponse(
@@ -114,8 +107,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ── 라우터 등록 ──────────────────────────────────────────────────
-app.include_router(feedback_router)
+# -- 라우터 등록 --------------------------------------------------------------
 app.include_router(question_router)
+app.include_router(feedback_router)
 app.include_router(report_router)
 app.include_router(media_router)
