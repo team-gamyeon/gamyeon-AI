@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -25,9 +26,27 @@ setup_logging()
 async def lifespan(app: FastAPI):
     feedback_service = get_feedback_service()
     register_feedback_listeners(feedback_service)
-    print("피드백 이벤트 리스너 등록 완료")
+    logger.info("feedback_event_listeners_registered")
 
-    yield
+    yield  # 서버 실행 중
+
+    # graceful shutdown — 진행 중인 BackgroundTasks 완료 대기.
+    # BackgroundTasks는 인메모리이므로 프로세스가 즉시 종료되면 콜백이 유실된다.
+    pending_tasks = [
+        t for t in asyncio.all_tasks()
+        if not t.done() and t is not asyncio.current_task()
+    ]
+    if pending_tasks:
+        logger.info(
+            "graceful_shutdown_wait pending_tasks=%d timeout=30s",
+            len(pending_tasks),
+        )
+        done, still_pending = await asyncio.wait(pending_tasks, timeout=30)
+        if still_pending:
+            logger.warning(
+                "graceful_shutdown_timeout tasks_not_completed=%d",
+                len(still_pending),
+            )
 
 
 app = FastAPI(
@@ -52,8 +71,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         for e in exc.errors()
     ]
     logger.warning(
-        "422 validation error url=%s errors=%s",
-        request.url.path, errors,
+        "validation_error url=%s errors=%s",
+        request.url.path,
+        errors,
     )
     return JSONResponse(
         status_code=422,
@@ -68,6 +88,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # BackgroundTasks 내부 예외는 이 핸들러에 도달하지 않는다.
+    # 라우터 레벨에서 발생한 예상치 못한 예외만 여기서 처리된다.
+    logger.error(
+        "unhandled_exception url=%s error=%s",
+        request.url.path,
+        str(exc),
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=500,
         content=ApiResponse(
@@ -79,8 +107,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ── 라우터 등록 ──────────────────────────────────────────────────
-app.include_router(feedback_router)
+# -- 라우터 등록 --------------------------------------------------------------
 app.include_router(question_router)
+app.include_router(feedback_router)
 app.include_router(report_router)
 app.include_router(media_router)
