@@ -33,13 +33,23 @@ def get_s3_download_port() -> S3DownloadPort:
 
 
 def _get_structuring_port() -> StructuringPort:
-    llm             = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+    llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        temperature=0.0,
+        timeout=settings.LLM_TIMEOUT_SECONDS,  
+        max_retries=2,                         
+    )
     prompt_provider = StructuringPromptProvider(version="v1")
     return LLMStructuringAdapter(llm=llm, prompt_provider=prompt_provider)
 
 
 def _get_question_gen_port() -> QuestionGenPort:
-    llm             = ChatOpenAI(model="gpt-4o-mini", temperature=0.8)
+    llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        temperature=0.8,
+        timeout=settings.LLM_TIMEOUT_SECONDS,  
+        max_retries=2,                         
+    )
     prompt_provider = QuestionGenPromptProvider(version="v1")
     return LLMQuestionGenAdapter(llm=llm, prompt_provider=prompt_provider)
 
