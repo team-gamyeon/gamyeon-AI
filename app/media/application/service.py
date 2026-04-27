@@ -45,7 +45,7 @@ class ProcessMediaCommand:
     s3_key: str
     tech_stack: tuple[str, ...]
     question_content: str
-    interview_type: str = "default"  # Consul KV 분기 (MVP-2)
+    interview_type: str = "default"
 
 
 # ──────────────────────────────────────────────
@@ -334,7 +334,7 @@ class MediaService:
     ) -> tuple[TimeScore, reliability]:
         """
         S8: 시간 점수 + 신뢰도 점수 산출.
-        Consul KV 정책(ScoringConfig) 기반.
+        ScoringConfig 정책 기반.
         도메인 calculate() 직접 호출.
         """
         time_score = TimeScore.calculate(

@@ -11,7 +11,6 @@ class TimeScore :
     """
     S8 시간 점수 계산 결과 — Value Object.
     ratio: answer_duration_ms ÷ limit_ms → r3() 적용.
-    limit_ms: ScoringConfig.limit_ms 기준 (Consul KV).
     """
     time_score:         int
     answer_duration_ms: int
@@ -27,7 +26,7 @@ class TimeScore :
         answer_duration_ms: int,
         config: ScoringConfig,
     ) -> Self :
-        """Consul KV 정책 기반 시간 점수 산출"""
+        """ScoringConfig 정책 기반 시간 점수 산출."""
         ratio = answer_duration_ms / config.limit_ms
         score = int(100 - abs(1 - ratio) * 100)
         score = max(0, min(100, score))
