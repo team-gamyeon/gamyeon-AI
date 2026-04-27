@@ -2,18 +2,25 @@
 구조화 로그 설정.
 
 dlq 로거:
-- MVP1: /var/log/dlq/dlq.log 파일 출력.
-- MVP2: Loki 핸들러 추가 (파일 핸들러 유지).
-        dlq_logger.addHandler(LokiHandler(...))
-        코드 변경 없이 핸들러만 추가.
+- 기본 경로: LOG_DIR 환경변수 (기본값 /var/log/dlq)
+- 권한 없을 경우 ./logs/dlq 로 폴백
 """
 
 import logging
 import logging.config
+import os
 from pathlib import Path
 
-def setup_logging(log_dir: str = "/var/log/dlq") -> None:
-    Path(log_dir).mkdir(parents=True, exist_ok=True)
+
+def setup_logging(log_dir: str | None = None) -> None:
+    if log_dir is None:
+        log_dir = os.getenv("LOG_DIR", "/var/log/dlq")
+
+    try:
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        log_dir = "./logs/dlq"
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     logging.config.dictConfig({
         "version": 1,
