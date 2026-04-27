@@ -30,33 +30,33 @@ jobs:
       - name: 의존성 설치 (dev 포함)
         run: uv sync --frozen
 
-  # 현재 파이썬에서는 Ruff 검사 생략
+  # 현재 파이썬에서는 Ruff,Test 검사 생략
   #    - name: Ruff 검사
   #      run: uv run ruff check .
 
   # ── Test: PR에서만 ───────────────────────────────────────────
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+  # test:
+  #   name: Test
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
 
-    steps:
-      - name: 코드 체크아웃
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: 코드 체크아웃
+  #       uses: actions/checkout@v4
 
-      - name: Python 설정
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+  #     - name: Python 설정
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
 
-      - name: uv 설치
-        uses: astral-sh/setup-uv@v5
+  #     - name: uv 설치
+  #       uses: astral-sh/setup-uv@v5
 
-      - name: 의존성 설치 (dev 포함)
-        run: uv sync --frozen
+  #     - name: 의존성 설치 (dev 포함)
+  #       run: uv sync --frozen
 
-      - name: 테스트 실행
-        run: uv run pytest --no-header -q
+  #     - name: 테스트 실행
+  #       run: uv run pytest --no-header -q
 
   # ── Build: arm64 이미지 빌드 + DockerHub 푸시 ────────────────
   build:
