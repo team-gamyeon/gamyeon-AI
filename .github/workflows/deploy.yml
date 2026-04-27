@@ -1,84 +1,115 @@
-name: Agent Server CI/CD
+name: Agent Server CI/CD Pipeline
+
 on:
   push:
     branches:
-      [
-        "develop",
-        "feat/*",
-        "fix/*",
-        "refactor/*",
-        "chore/*",
-        "docs/*",
-        "test/*",
-      ]
+      - main
+      - develop
+      - "chore/cicd"
+  pull_request:
 
 jobs:
-  # 1. 공통 검증 단계 (CI)
-  test-and-build:
+  # ── Lint: PR에서만 ───────────────────────────────────────────
+  lint:
+    name: Lint (Ruff)
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    if: github.event_name == 'pull_request'
 
-      - name: Set up Python 3.12
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v5
 
-      - name: Install dependencies
+      - name: 의존성 설치 (dev 포함)
         run: uv sync --frozen
 
-      # lint
-      # - name: Check Code Style
-      #   run: |
-      #     pip install flake8
-      #     flake8 . --max-line-length=120 --exclude=.git,__pycache__
+      - name: Ruff 검사
+        run: uv run ruff check .
 
-      # clean build
-      - name: Run Tests
-        run: uv run pytest --tb=short || true
-
-  # 2. 배포 단계 (CD) - develop
-  deploy:
-    needs: test-and-build
-    if: github.ref == 'refs/heads/develop'
+  # ── Test: PR에서만 ───────────────────────────────────────────
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    if: github.event_name == 'pull_request'
 
-      - name: Login to Docker Hub
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v5
+
+      - name: 의존성 설치 (dev 포함)
+        run: uv sync --frozen
+
+      - name: 테스트 실행
+        run: uv run pytest --no-header -q
+
+  # ── Build: arm64 이미지 빌드 + DockerHub 푸시 ────────────────
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: QEMU 설정 (arm64 크로스 빌드용)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: DockerHub 로그인
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/gamyeon-agent:latest .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/gamyeon-agent:latest
+      - name: Docker 이미지 빌드 + 푸시 (linux/arm64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/gamyeon-agent:latest
 
-      - name: Deploy to EC2
+  # ── Deploy: build 완료 후 EC2에서 pull + 재시작 ──────────────
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: EC2 컨테이너 재시작
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 10m
           script: |
-            cd /home/ec2-user/app
+            set -e
 
-            # 컨테이너 중지
-            docker-compose down agent-server || true
+            echo "=== [1/2] 새 이미지 pull ==="
+            cd ~/gamyeon-agent
+            docker compose pull
 
-            # 기존 이미지 삭제
-            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/gamyeon-agent:latest || true
+            echo "=== [2/2] 컨테이너 재시작 ==="
+            docker compose up -d
 
-            # 새 이미지 pull
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/gamyeon-agent:latest
-
-            # 컨테이너 재시작
-            docker-compose up -d --no-deps agent-server
-
-            # 이미지 찌꺼기 청소
-            docker image prune -f
+            echo "=== 배포 완료: $(date) ==="
