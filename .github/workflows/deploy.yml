@@ -103,14 +103,17 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 10m
-          script: |
+          script: script: |
             set -e
 
-            echo "=== [1/2] 새 이미지 pull ==="
+            echo "=== [1/3] DockerHub 로그인 ==="
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+            echo "=== [2/3] 새 이미지 pull ==="
             cd ~/gamyeon-agent
             docker compose pull
 
-            echo "=== [2/2] 컨테이너 재시작 ==="
+            echo "=== [3/3] 컨테이너 재시작 ==="
             docker compose up -d
 
             echo "=== 배포 완료: $(date) ==="
