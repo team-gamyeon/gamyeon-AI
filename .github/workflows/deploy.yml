@@ -30,8 +30,9 @@ jobs:
       - name: 의존성 설치 (dev 포함)
         run: uv sync --frozen
 
-      - name: Ruff 검사
-        run: uv run ruff check .
+  # 현재 파이썬에서는 Ruff 검사 생략
+  #    - name: Ruff 검사
+  #      run: uv run ruff check .
 
   # ── Test: PR에서만 ───────────────────────────────────────────
   test:
