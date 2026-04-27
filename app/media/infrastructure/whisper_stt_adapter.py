@@ -29,12 +29,12 @@ logger = logging.getLogger(__name__)
 
 # 모델 로드 순서 (OOM fallback)
 _MODEL_SEQUENCE = [
-    STTModelType.MEDIUM,
+    # STTModelType.MEDIUM,
     STTModelType.SMALL,
 ]
 
 _MODEL_NAME_MAP = {
-    STTModelType.MEDIUM: "medium",
+    # STTModelType.MEDIUM: "medium",
     STTModelType.SMALL: "small",
 }
 
