@@ -27,7 +27,7 @@ class reliability:
         factors: ReliabilityFactors,
         config: ScoringConfig,
     ) -> Self:
-        """Consul KV 정책 기반 신뢰도 점수 산출."""
+        """ScoringConfig 정책 기반 신뢰도 점수 산출."""
         raw = (
             factors.question_success_rate * config.question_success_rate_weight
             + factors.segment_coverage * config.segment_coverage_weight

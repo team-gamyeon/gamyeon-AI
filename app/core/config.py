@@ -19,18 +19,16 @@ class Settings(BaseSettings):
     WHISPER_DEVICE: str = "cpu"  # "cpu" | "cuda"
     WHISPER_COMPUTE_TYPE: str = "int8"  # "int8" | "float16" | "float32"
 
-    # ── Claude (LLM 교정) ─────────────────────────────────────────
+    # ── OpenAI (LLM 교정) ─────────────────────────────────────────
     OPENAI_API_KEY: str = ""
     GPT_MINI_MODEL: str = "gpt-4o-mini"
     LLM_TIMEOUT_SECONDS: float = 15.0
 
-    # ── Consul (점수 정책) ────────────────────────────────────────
-    CONSUL_URL: str = "http://consul:8500"
-    CONSUL_TOKEN: str = ""
-
-    # ── Whisper STT ───────────────────────────────────────────────
-    WHISPER_DEVICE: str = "cuda"  # "cpu" | "cuda"
-    WHISPER_COMPUTE_TYPE: str = "int8"  # "int8" | "float16" | "float32"
+    # ── 점수 정책 ─────────────────────────────────────────────────
+    SCORING_LIMIT_MS: int = 60_000
+    SCORING_QUESTION_SUCCESS_RATE_WEIGHT: float = 50.0
+    SCORING_SEGMENT_COVERAGE_WEIGHT: float = 30.0
+    SCORING_AVG_WORD_CONFIDENCE_WEIGHT: float = 20.0
 
     # ── Spring Boot 웹훅 ──────────────────────────────────────────
     SPRING_WEBHOOK_URL: str = (
@@ -48,8 +46,6 @@ class Settings(BaseSettings):
     QUESTION_SPRING_WEBHOOK_URL: str = (
         "http://spring-server:8080/internal/v1/questions/callback"
     )
-
-    OPENAI_API_KEY: str = ""
 
 
 settings = Settings()

@@ -1,17 +1,30 @@
 services:
-  agent-server:
+  agent-api:
     image: zzang6535/gamyeon-agent:latest
+    container_name: GAMYEON_AGENT_API
     restart: always
-    container_name: GAMYEON_AGENT_SERVER
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - CONSUL_HOST=consul
+    env_file: .env
+    mem_limit: 512m
     networks:
-      - gamyeon-net
+      - gamyeon-agent-net
+
+  arq-worker:
+    image: zzang6535/gamyeon-agent:latest
+    container_name: GAMYEON_ARQ_WORKER
+    restart: always
+    command: arq app.worker.WorkerSettings
+    env_file: .env
+    mem_limit: 1024m
+    volumes:
+      - whisper-cache:/root/.cache/huggingface # 모델 재다운로드 방지
+    networks:
+      - gamyeon-agent-net
+
+volumes:
+  whisper-cache:
 
 networks:
-  gamyeon-net:
-    external: true
+  gamyeon-agent-net:
+    name: gamyeon-agent-net

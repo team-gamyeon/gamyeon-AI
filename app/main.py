@@ -1,17 +1,13 @@
 import logging
-import os
-import uuid
 from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
-import consul
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.core import ConsulHelper
 from app.core.logging_config import setup_logging
 from app.core.schema import ApiResponse
 from app.feedback.infrastructure.di import get_feedback_service
@@ -24,41 +20,14 @@ from app.report.router import router as report_router
 load_dotenv()
 setup_logging()
 
-# Configuration about consul client
-consul_host = os.getenv("CONSUL_HOST", "localhost")
-c = consul.Consul(host=consul_host, port=8500)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    consul_helper = ConsulHelper(host="consul")
-    config = consul_helper.get_config("config/agent/settings")
-
-    SERVICE_ID = config.get("SERVICE_ID", "DEFAULT-SERVER")
-    EXTERNAL_HOST_IP = config.get("EXTERNAL_HOST_IP", "127.0.0.1")
-    EC2_PUBLIC_IP = config.get("EC2_PUBLIC_IP", "0.0.0.0")
-
-    # UUID를 사용하여 매번 다른 ID 생성
-    unique_id = f"{SERVICE_ID}:{uuid.uuid4()}"
-
-    c.agent.service.register(
-        name=SERVICE_ID,
-        service_id=unique_id,
-        address=EXTERNAL_HOST_IP,
-        port=8000,
-        check=consul.Check.http(f"http://{EC2_PUBLIC_IP}:8000/health", interval="10s"),
-    )
-    print("Consul 등록 완료")
-
-    # ✅ 피드백 이벤트 리스너 등록 (추가되는 유일한 부분)
     feedback_service = get_feedback_service()
     register_feedback_listeners(feedback_service)
-    print("✅ 피드백 이벤트 리스너 등록 완료")
+    print("피드백 이벤트 리스너 등록 완료")
 
-    yield  # 서버 실행
-
-    c.agent.service.deregister(SERVICE_ID)
-    print("Consul 등록 해제")
+    yield
 
 
 app = FastAPI(
@@ -70,16 +39,12 @@ app = FastAPI(
 
 
 # ── 헬스체크 ─────────────────────────────────────────────────────
-
-
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "AI server is running"}
 
 
 # ── 전역 예외 핸들러 ─────────────────────────────────────────────
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = [

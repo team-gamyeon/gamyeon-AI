@@ -22,14 +22,11 @@ from app.media.application.service_helper.media_preprocessor import MediaPreproc
 from app.media.infrastructure.whisper_stt_adapter            import WhisperSTTAdapter
 from app.media.infrastructure.gpt_mini_adapter               import GptMiniAdapter
 from app.media.infrastructure.inmemory_gaze_buffer           import InMemoryGazeBuffer
-from app.media.infrastructure.consul_scoring_config          import ConsulScoringConfigAdapter
+from app.media.infrastructure.env_scoring_config             import EnvScoringConfigAdapter
 from app.media.infrastructure.keyword_extractor_impl         import KeywordExtractorImpl
 from app.media.application.usecase                           import ProcessMediaUseCase
 from app.media.infrastructure.spring_webhook_adapter         import SpringWebhookAdapter
 from app.media.infrastructure.media_event_adapter            import MediaEventAdapter
-from app.media.application.usecase         import ProcessMediaUseCase
-from app.media.infrastructure.spring_webhook_adapter import SpringWebhookAdapter
-from app.media.infrastructure.media_event_adapter    import MediaEventAdapter
 
 # 싱글턴 어댑터 (애플리케이션 생명주기와 동일)
 @lru_cache(maxsize=1)
@@ -61,11 +58,8 @@ def _get_gaze_buffer() -> InMemoryGazeBuffer:
     return InMemoryGazeBuffer()
 
 @lru_cache(maxsize=1)
-def _get_consul_adapter() -> ConsulScoringConfigAdapter:
-    return ConsulScoringConfigAdapter(
-        url=settings.CONSUL_URL,
-        token=settings.CONSUL_TOKEN,
-    )
+def _get_env_scoring_adapter() -> EnvScoringConfigAdapter:
+    return EnvScoringConfigAdapter()
 
 @lru_cache(maxsize=1)
 def _get_keyword_extractor() -> KeywordExtractorImpl:
@@ -102,7 +96,7 @@ def _build_media_service() -> MediaService:
         stt_port=          _get_whisper_adapter(),
         correction_port=   _get_gpt_mini_adapter(),
         gaze_buffer=       _get_gaze_buffer(),
-        scoring_config=    _get_consul_adapter(),
+        scoring_config=    _get_env_scoring_adapter(),
         keyword_extractor= _get_keyword_extractor(),
         gaze_aggregator=   _get_gaze_aggregator(),
         media_preprocessor=_get_media_preprocessor(),

@@ -2,12 +2,8 @@
 Webhook 재시도 정책 Value Object.
 frozen=True: 정책값 불변 보장.
 
-MVP-1 기본값:
-- max_attempts=3, backoff_seconds=2.0
-- → 2s → 4s → 8s 지수 백오프
-
-MVP-2: Consul KV 또는 환경변수로 정책 외부 주입 가능.
-
+기본값: max_attempts=3, backoff_seconds=2.0
+→ 2s → 4s → 8s 지수 백오프
 """
 from __future__ import annotations
 from dataclasses import dataclass

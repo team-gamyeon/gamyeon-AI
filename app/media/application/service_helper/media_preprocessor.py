@@ -102,8 +102,8 @@ class MediaPreprocessor:
         # S2: 검증 + 메타데이터 추출
         meta = self._validate_and_analyze(local_path)
 
-        # S3: 오디오 추출
-        wav_path = self._extract_audio(local_path, work_dir)
+        # S3: 오디오 추출 (리먹싱된 경우 meta.local_path 사용)
+        wav_path = self._extract_audio(meta.local_path, work_dir)
 
         logger.info(
             "전처리 완료 interview_id=%d question_id=%d"
@@ -225,9 +225,14 @@ class MediaPreprocessor:
                         break
 
             if not raw_duration or raw_duration == "N/A":
-                raise MediaValidationError(
-                    f"영상 duration 추출 불가 (브라우저 WebM 헤더 누락 가능성): {local_path}"
+                # 브라우저 WebM은 헤더에 duration이 없음 → 리먹싱으로 복구
+                local_path, raw_duration = self._remux_and_get_duration(
+                    local_path, data
                 )
+                if not raw_duration or raw_duration == "N/A":
+                    raise MediaValidationError(
+                        f"영상 duration 추출 불가: {local_path}"
+                    )
 
             duration_s = float(raw_duration)
 
@@ -248,6 +253,60 @@ class MediaPreprocessor:
                 f"ffprobe 실패 (손상 파일 가능성): {local_path} "
                 f"stderr={e.stderr.decode('utf-8', errors='ignore')}"
             )
+
+    def _remux_and_get_duration(
+        self, local_path: str, original_data: dict
+    ) -> tuple[str, str | None]:
+        """
+        브라우저 WebM duration 헤더 복구.
+
+        MediaRecorder로 녹화된 WebM은 seekable=false 컨테이너로 저장되어
+        duration 메타데이터가 없음. ffmpeg -c copy 리먹싱으로 전체 파일을
+        스캔해 컨테이너를 재작성하면 duration이 채워짐.
+        """
+        path = Path(local_path)
+        fixed_path = str(path.parent / f"_fixed{path.suffix}")
+
+        try:
+            subprocess.run(
+                ["ffmpeg", "-i", local_path, "-c", "copy", "-y", fixed_path],
+                check=True,
+                capture_output=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.warning(
+                "WebM 리먹싱 실패, 원본 유지 path=%s stderr=%s",
+                local_path, e.stderr.decode("utf-8", errors="ignore"),
+            )
+            return local_path, None
+
+        try:
+            result = subprocess.run(
+                [
+                    "ffprobe", "-v", "error",
+                    "-print_format", "json",
+                    "-show_format", "-show_streams",
+                    fixed_path,
+                ],
+                check=True,
+                capture_output=True,
+            )
+            data = json.loads(result.stdout)
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            return fixed_path, None
+
+        raw_duration = data.get("format", {}).get("duration")
+        if not raw_duration or raw_duration == "N/A":
+            for stream in data.get("streams", []):
+                d = stream.get("duration")
+                if d and d != "N/A":
+                    raw_duration = d
+                    break
+
+        logger.info(
+            "WebM 리먹싱 완료 path=%s duration=%s", fixed_path, raw_duration,
+        )
+        return fixed_path, raw_duration
 
     def _extract_audio(self, local_path: str, work_dir: Path) -> str:
         """
