@@ -101,6 +101,11 @@ class TestCalcKeyword:
         feedbacks = [make_feedback(keyword_count=4)] * 3
         assert adapter.calc_keyword(feedbacks) == 85
 
+    def test_six_or_more(self):
+        # 평균 6 이상 → 최상위 구간 → 95점
+        feedbacks = [make_feedback(keyword_count=6)] * 3
+        assert adapter.calc_keyword(feedbacks) == 95
+
     def test_mixed_average_boundary(self):
         # 평균이 정확히 2.0인 경우 → < 4 구간 → 70점
         feedbacks = [

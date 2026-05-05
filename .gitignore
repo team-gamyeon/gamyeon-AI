@@ -75,5 +75,5 @@ logs/
 chroma_db/
 vector_store/
 claude.md
-gemini.mds
-.claude*
+.claude/settings.local.json 
+ 
