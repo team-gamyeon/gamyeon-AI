@@ -74,3 +74,6 @@ logs/
 *.bin
 chroma_db/
 vector_store/
+claude.md
+gemini.mds
+.claude*

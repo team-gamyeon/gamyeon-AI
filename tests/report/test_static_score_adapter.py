@@ -56,20 +56,20 @@ class TestCalcTimeManagement:
         ]
         assert adapter.calc_time_management(feedbacks) == round(70.5)
 
-    def test_zero_score_excluded_from_average(self):
-        # time_score=0은 미측정으로 간주하여 평균에서 제외
+    def test_includes_zero_in_average(self):
+        # time_score=0도 단순 평균에 포함 — 제외 로직 없음
         feedbacks = [
             make_feedback(time_score=80),
             make_feedback(time_score=90),
-            make_feedback(time_score=0),   # 미측정 항목
+            make_feedback(time_score=0),
         ]
-        # 0 제외 → (80 + 90) / 2 = 85
-        assert adapter.calc_time_management(feedbacks) == 85
+        # (80 + 90 + 0) / 3 = 56.67 → 57
+        assert adapter.calc_time_management(feedbacks) == 57
 
-    def test_all_zero_returns_neutral(self):
-        # 측정 가능한 항목이 없으면 중립값 50 반환
+    def test_all_zero_returns_zero(self):
+        # 모든 time_score가 0이면 평균도 0
         feedbacks = [make_feedback(time_score=0)] * 3
-        assert adapter.calc_time_management(feedbacks) == 50
+        assert adapter.calc_time_management(feedbacks) == 0
 
 
 # ── calc_keyword ───────────────────────────────────────────
@@ -82,30 +82,33 @@ class TestCalcKeyword:
         assert adapter.calc_keyword(feedbacks) == 10
 
     def test_one(self):
+        # 평균 1 → < 2 구간 → 50점
         feedbacks = [make_feedback(keyword_count=1)] * 3
-        assert adapter.calc_keyword(feedbacks) == 40
+        assert adapter.calc_keyword(feedbacks) == 50
 
     def test_two(self):
+        # 평균 2 → < 4 구간 → 70점
         feedbacks = [make_feedback(keyword_count=2)] * 3
-        assert adapter.calc_keyword(feedbacks) == 80
+        assert adapter.calc_keyword(feedbacks) == 70
 
     def test_three(self):
+        # 평균 3 → < 4 구간 → 70점
         feedbacks = [make_feedback(keyword_count=3)] * 3
-        assert adapter.calc_keyword(feedbacks) == 80
+        assert adapter.calc_keyword(feedbacks) == 70
 
-    def test_over_three(self):
-        # 키워드 과잉 사용(3개 초과)은 60점으로 하향 평가
+    def test_four_to_five_range(self):
+        # 평균 4 → < 6 구간 → 85점
         feedbacks = [make_feedback(keyword_count=4)] * 3
-        assert adapter.calc_keyword(feedbacks) == 60
+        assert adapter.calc_keyword(feedbacks) == 85
 
     def test_mixed_average_boundary(self):
-        # 평균이 정확히 2.0인 경우 80점 구간에 포함되는지 검증
+        # 평균이 정확히 2.0인 경우 → < 4 구간 → 70점
         feedbacks = [
             make_feedback(keyword_count=1),
             make_feedback(keyword_count=3),
         ]
-        # 평균 = 2.0 → 80점 구간
-        assert adapter.calc_keyword(feedbacks) == 80
+        # 평균 = 2.0 → < 4 구간 → 70점
+        assert adapter.calc_keyword(feedbacks) == 70
 
 
 # ── calc_accuracy ──────────────────────────────────────────

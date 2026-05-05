@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+from app.core.config import settings
 from app.report.application.service import ReportService
 from app.report.application.port.callback_port import CallbackPort
 from app.report.infrastructure.static_score_adapter import StaticScoreAdapter
@@ -162,19 +163,20 @@ class TestExecuteAndCallback:
         assert kwargs["payload"].status == "FAILED"
 
     @pytest.mark.asyncio
-    async def test_callback_not_sent_when_url_missing(self):
-        # callback URL이 없으면 send가 호출되지 않아야 함
+    async def test_callback_not_sent_when_url_missing(self, monkeypatch):
+        # request.callback과 환경변수 fallback 모두 빈 문자열이면 send가 호출되지 않아야 함
+        # callback: str 필드는 None 불가 — 빈 문자열("")로 URL 없음을 표현
+        monkeypatch.setattr(settings, "REPORT_SPRING_WEBHOOK_URL", "")
+
         mock_port = AsyncMock(spec=CallbackPort)
         svc = ReportService(adapter=StaticScoreAdapter(), callback_port=mock_port)
 
         request = ReportGenerateRequest(
             intv_id=5,
             user_id=3,
-            callback=None,
+            callback="",
             feedbacks=[make_feedback(i) for i in range(1, 4)],
         )
 
-        # settings.REPORT_SPRING_WEBHOOK_URL도 None인 환경을 가정
-        # 실제 환경에서는 monkeypatch로 settings를 오버라이드하세요
         await svc.execute_and_callback(request)
         mock_port.send.assert_not_called()
