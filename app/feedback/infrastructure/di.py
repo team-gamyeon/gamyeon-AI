@@ -32,7 +32,7 @@ def _get_llm() -> ChatOpenAI:
     # request_timeout: LLM 응답이 지연될 경우 요청 큐 누적 방지.
     # max_retries=0: 재시도는 adapter(_invoke_with_retry)에서 직접 제어한다.
     return ChatOpenAI(
-        model=settings.FEEDBACK_LLM_MODEL,
+        model=settings.LLM_MODEL,
         temperature=0.0,
         request_timeout=settings.FEEDBACK_LLM_TIMEOUT_SEC,
         max_retries=0,

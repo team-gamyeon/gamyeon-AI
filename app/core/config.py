@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # ── OpenAI (LLM 교정) ─────────────────────────────────────────
     OPENAI_API_KEY: str = ""
-    GPT_MINI_MODEL: str = "gpt-4o-mini"
+    LLM_MODEL: str = "gpt-4o-mini"
     LLM_TIMEOUT_SECONDS: float = 15.0
 
     # ── 점수 정책 ─────────────────────────────────────────────────
@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     SCORING_QUESTION_SUCCESS_RATE_WEIGHT: float = 50.0
     SCORING_SEGMENT_COVERAGE_WEIGHT: float = 30.0
     SCORING_AVG_WORD_CONFIDENCE_WEIGHT: float = 20.0
+
+    # ── Feedback ─────────────────────────────────────────────────
+    FEEDBACK_LLM_TIMEOUT_SEC: float = 15.0
+    FEEDBACK_LLM_CONCURRENCY: int = 3
+    
 
     # ── Spring Boot 웹훅 ──────────────────────────────────────────
     SPRING_WEBHOOK_URL: str = (
