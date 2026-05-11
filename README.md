@@ -1,4 +1,4 @@
-```
+
 # 가면 (Gamyeon) — AI 모의 면접 시뮬레이터
 
 AI와 함께하는 실전형 면접 연습 플랫폼입니다.
@@ -69,6 +69,7 @@ AI가 면접관 역할을 수행합니다.
 ---
 
 ## 시스템 아키텍처
+```
 
   [클라이언트]
        |
@@ -77,13 +78,13 @@ AI가 면접관 역할을 수행합니다.
   ┌────┴────────────────────────┐
   |                             |
   [Spring 서버]             [Backoffice 서버]
-  Gradle Multi Module        관리자 기능
+  메인 서비스                   관리자 기능
   ├── user
   ├── interview
   ├── evaluation
   └── notification
        |
-       | REST
+       | REST, Webhook
        |
   [Python AI 서버]         FastAPI + LangChain
   ├── question/            면접 질문 생성
@@ -93,11 +94,8 @@ AI가 면접관 역할을 수행합니다.
   ├── resume/              이력서 파싱
   └── agent/               2차 MVP 예정
 
----
+```
 
-## 프로젝트 구조
-
----
 
 ## 개발 로드맵
 
@@ -111,32 +109,27 @@ AI가 면접관 역할을 수행합니다.
 
 ---
 
-## 로컬 실행 방법
 
-  Spring 서버
 
-    git clone https://github.com/your-org/gamyeon.git
-    cd gamyeon
-    ./gradlew bootRun
+## 로컬 실행 방법 - Python AI 서버
 
-  Python AI 서버
-  PS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run uvicorn app.main:app --reload
+uv 설치
+```
+Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-### test
-## 테스트 방법
+설치 후에는 VS Code를 완전히 껐다가 다시 켜야 터미널에서 uv 명령어를 인식합니다. 
 
-***
+
 
 **① 서버 실행**
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-***
-
 **② `http://localhost:8000/docs` 접속**
 
-***
 
 **③ `/internal/questions/generate` 클릭 → `Try it out` 클릭**
 
@@ -174,13 +167,9 @@ uv run uvicorn app.main:app --reload
 }
 ```
 
-***
-
 **⑤ `Execute` 클릭**
 
-***
-
-## 예상 정상 응답
+###  예상 정상 응답
 
 ```json
 {
@@ -193,11 +182,10 @@ uv run uvicorn app.main:app --reload
 }
 ```
 
-***
-
 **⑥ 파일 경로 주의사항**
 
-`sample/resume.pdf` 경로는 **서버 실행 위치 기준**입니다. 프로젝트 루트에서 서버를 실행했다면 아래 구조여야 합니다.
+`sample/resume.pdf` 경로는 **서버 실행 위치 기준**입니다. 
+프로젝트 루트에서 서버를 실행했다면 아래 구조여야 합니다.
 
 ```
 gamyeon-AI/
@@ -205,74 +193,8 @@ gamyeon-AI/
     ├── resume.pdf        ← 실제 파일 존재 확인
     ├── portfolio.pdf
     └── self_introduction.pdf
-```
-  환경변수 (.env)
 
+  환경변수 (.env)
     OPENAI_API_KEY=your-openai-api-key
     ENVIRONMENT=development
-
----
-
-```
-
-### 로컬로 돌리는 중 
-```
-
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from dotenv import load_dotenv
-
-from app.report.router import router as report_router
-from app.question.router import router as question_router
-from app.feedback.router import router as feedback_router
-from app.core.schema import ApiResponse
-
-import os
-
-load_dotenv()
-
-app = FastAPI(
-    title="Interview AI Server",
-    description="AI Interview Simulator - AI Features",
-    version="0.1.0",
-)
-
-# ── 라우터 등록 ──────────────────────────────────────────────────
-app.include_router(question_router)
-app.include_router(feedback_router)
-app.include_router(report_router)
-
-# ── 헬스체크 ─────────────────────────────────────────────────────
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "message": "AI server is running"}
-
-# ── 전역 예외 핸들러 ─────────────────────────────────────────────
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(
-        status_code=422,
-        content=ApiResponse(
-            success=False,
-            code="CMMN-V001",
-            message="입력값 유효성 검사에 실패했습니다.",
-            data=None,
-        ).model_dump(),
-    )
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content=ApiResponse(
-            success=False,
-            code="CMMN-I001",
-            message="서버 내부 오류가 발생했습니다.",
-            data=None,
-        ).model_dump(),
-    )
-
-
-
 ````

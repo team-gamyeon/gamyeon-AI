@@ -1,3 +1,4 @@
+import asyncio
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -22,9 +23,9 @@ class FeedbackOutput(BaseModel):
 
 
 # ── Adapter ─────────────────────────────────────────────────────
+
 class LangchainFeedbackAdapter(FeedbackPort):
 
-    # 사전 차단 기준값
     MIN_TRANSCRIPT_LENGTH = 10
     MIN_RELIABILITY_SCORE = 40
 
@@ -32,15 +33,22 @@ class LangchainFeedbackAdapter(FeedbackPort):
         self,
         llm: ChatOpenAI,
         prompt_provider: FeedbackPromptProvider,
+        semaphore: asyncio.Semaphore,          # di.py에서 주입
     ) -> None:
+        self._semaphore = semaphore
         self._parser = PydanticOutputParser(pydantic_object=FeedbackOutput)
-        self._prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", prompt_provider.system_prompt),
-                ("human", prompt_provider.human_prompt),
-            ]
-        ).partial(format_instructions=self._parser.get_format_instructions())
+        self._prompt = ChatPromptTemplate.from_messages([
+            ("system", prompt_provider.system_prompt),
+            ("human", prompt_provider.human_prompt),
+        ]).partial(format_instructions=self._parser.get_format_instructions())
         self._chain = self._prompt | llm | self._parser
+
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(Exception),
+        reraise=True,
+    )
 
     # ── 외부 진입점 ──────────────────────────────────────────────
     async def generate_feedback(self, request: FeedbackRequest) -> QuestionFeedback:
@@ -74,13 +82,14 @@ class LangchainFeedbackAdapter(FeedbackPort):
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
+
     async def _invoke_with_retry(self, request: FeedbackRequest) -> FeedbackOutput:
-        return await self._chain.ainvoke(
-            {
+        # 세마포어로 동시 호출 수를 제한하여 OpenAI TPM 한도 초과를 방지한다.
+        async with self._semaphore:
+            return await self._chain.ainvoke({
                 "question_content": request.question_content,
                 "corrected_transcript": request.corrected_transcript,
-            }
-        )
+            })
 
     # ── media 수치 추출 ──────────────────────────────────────────
     @staticmethod

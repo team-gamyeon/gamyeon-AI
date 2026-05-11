@@ -1,12 +1,27 @@
+import asyncio
 import fitz
+from concurrent.futures import ThreadPoolExecutor
 from app.question.application.port.pdf_extract_port import PdfExtractPort
 
 MAX_CHARS_RESUME = 3000
 MAX_CHARS_OTHER = 2000
 
+_executor = ThreadPoolExecutor(max_workers=4)
+
 class PyMuPDFAdapter(PdfExtractPort):
 
     async def extract(self, file_bytes: bytes, max_chars: int = MAX_CHARS_RESUME) -> str:
+        loop = asyncio.get_event_loop()
+        # 동기 블로킹 코드를 스레드풀로 격리
+        text = await loop.run_in_executor(
+            _executor,
+            self._extract_sync,
+            file_bytes,
+            max_chars
+        )
+        return text
+
+    def _extract_sync(self, file_bytes: bytes, max_chars: int) -> str:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         text = "\n".join([page.get_text() for page in doc])
         doc.close()

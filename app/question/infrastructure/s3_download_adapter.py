@@ -1,39 +1,31 @@
 import logging
-
 import aioboto3
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from app.core.config import settings
 from app.question.application.port.s3_download_port import S3DownloadPort
 
 logger = logging.getLogger(__name__)
 
+# 앱 시작 시 1회만 생성 (싱글턴)
+_session = aioboto3.Session(
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    region_name=settings.AWS_REGION,
+)
 
 class S3DownloadAdapter(S3DownloadPort):
     def __init__(self, timeout: float = 30.0):
         self.timeout = timeout
 
     async def download(self, file_key: str) -> bytes:
-        """
-        Spring으로부터 받은 fileKey를 통해 S3에서 직접 파일을 다운로드합니다.
-        """
         try:
             logger.info(f"S3 파일 다운로드 시작: {file_key}")
 
-            session = aioboto3.Session(
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_REGION,
-            )
-
-            # Pylance(VSCode)에서 뜨는 빨간줄은 aioboto3의 타입 힌팅 한계입니다.
-            # '# type: ignore'를 붙이면 경고가 사라지며, 실제 런타임에서는 완벽히 작동합니다.
-            async with session.client("s3") as s3_client:  # type: ignore
+            async with _session.client("s3") as s3_client:  # type: ignore
                 response = await s3_client.get_object(
                     Bucket=settings.S3_BUCKET, Key=file_key
                 )
                 file_data = await response["Body"].read()
-
                 logger.info(f"S3 다운로드 완료: {len(file_data)} bytes")
                 return file_data
 

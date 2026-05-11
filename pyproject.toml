@@ -30,5 +30,6 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["app"]
+pythonpath = ["."] 
 testpaths = ["tests"]
+asyncio_mode = "auto"

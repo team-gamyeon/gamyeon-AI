@@ -2,10 +2,8 @@ uv run uvicorn app.main:app --reload --port 8000
 
 uv run python callback_receiver.py
 
-들여쓰기 확인 !! 
-# webhook 받는 애 
+# webhook 수신
 PS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run python callback_receiver.py
-
 
 ### report 리포트 생성요청 test
 (gamyeon-ai) PS C:\Users\user\Documents\GitHub\gamyeon-AI> 
@@ -14,8 +12,9 @@ curl.exe -X POST "http://localhost:8000/internal/v1/reports/generate" `
 -d "@request.json"   
 
 # Event 
-(gamyeon-ai) PS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run python test_event_integration.py
-(gamyeon-ai) PS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run python callback_receiver.pyPS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run uvicorn app.main:app --reload --port 8000
+\GitHub\gamyeon-AI> uv run python test_event_integration.py
+\GitHub\gamyeon-AI> uv run python callback_receiver.py
+\GitHub\gamyeon-AI> uv run uvicorn app.main:app --reload --port 8000
 # question - test 
 ```
 {
@@ -90,4 +89,4 @@ curl -X POST http://localhost:8000/internal/v1/reports/generate \
     "feedbacks": [...]
   }'
 
-```
+``` 
