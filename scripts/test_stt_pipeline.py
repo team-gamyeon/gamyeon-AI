@@ -48,7 +48,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 TECH_STACK     = [t.strip() for t in os.environ.get("TECH_STACK", "").split(",") if t.strip()]
 DEVICE         = os.environ.get("WHISPER_DEVICE",    "cpu")
 COMPUTE_TYPE   = os.environ.get("WHISPER_COMPUTE",   "int8")
-GPT_MINI_MODEL = os.environ.get("GPT_MINI_MODEL", "gpt-4o-mini")
+LLM_MODEL      = os.environ.get("LLM_MODEL",         "gpt-4o-mini")
 
 def _check_env() -> None:
     missing = []
@@ -108,7 +108,7 @@ async def main() -> None:
     # ── S5: LLM 교정 ──────────────────────────────────────────────
     _hr("S5  ClaudeHaikuAdapter  (LLM CoT 교정)")
 
-    gpt_adapter = GptMiniAdapter(api_key=OPENAI_API_KEY, model=GPT_MINI_MODEL)
+    gpt_adapter = GptMiniAdapter(api_key=OPENAI_API_KEY, model=LLM_MODEL)
     correction     = await gpt_adapter.correct(
         raw_transcript=stt_result.raw_transcript,
         tech_stack=TECH_STACK,

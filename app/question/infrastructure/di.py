@@ -1,5 +1,7 @@
 from langchain_openai import ChatOpenAI
 
+from app.core.config import settings
+
 from app.question.application.port.s3_download_port import S3DownloadPort
 from app.question.application.port.pdf_extract_port import PdfExtractPort
 from app.question.application.port.structuring_port import StructuringPort
