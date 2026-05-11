@@ -45,7 +45,7 @@ def _get_whisper_adapter() -> WhisperSTTAdapter:
 def _get_gpt_mini_adapter() -> GptMiniAdapter:
     return GptMiniAdapter(
         api_key=settings.OPENAI_API_KEY,
-        model=settings.GPT_MINI_MODEL,
+        model=settings.LLM_MODEL,
         timeout=settings.LLM_TIMEOUT_SECONDS,
     )
 
