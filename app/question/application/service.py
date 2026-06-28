@@ -7,6 +7,12 @@ from app.question.application.port.s3_download_port import S3DownloadPort
 from app.question.application.port.structuring_port import StructuringPort
 from app.question.schema.request import QuestionGenerateRequest
 from app.question.schema.response import QuestionCallbackPayload
+from app.question.exception import (
+    S3DownloadError,
+    PdfExtractError,
+    LLMStructuringError,
+    LLMGenerationError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +34,7 @@ class QuestionService:
         self._callback = callback_port
 
     async def run(self, request: QuestionGenerateRequest) -> None:
-        payload: QuestionCallbackPayload  # 타입 힌트만 선언
+        payload: QuestionCallbackPayload
 
         try:
             # 1. 파일 키 추출
@@ -67,6 +73,8 @@ class QuestionService:
 
             # 5. 질문 생성
             questions = await self._qgen.generate(interview)
+            if not questions:
+                raise LLMGenerationError("LLM이 질문을 생성하지 못했습니다. (빈 배열 반환)")
 
             # 6. 성공 페이로드
             payload = QuestionCallbackPayload(
@@ -77,19 +85,52 @@ class QuestionService:
             )
             logger.info(f"질문 생성 성공 intvId={request.intvId}")
 
-        except Exception as e:
-            # 7. 실패 페이로드
+        except S3DownloadError as e:
             logger.error(f"질문 생성 실패 intvId={request.intvId}: {e}", exc_info=True)
             payload = QuestionCallbackPayload(
                 intvId=request.intvId,
                 status="FAILED",
                 questions=[],
-                errorMessage=str(e),
+                errorMessage=f"[S3_DOWNLOAD_ERROR] {e}",
+            )
+
+        except PdfExtractError as e:
+            logger.error(f"질문 생성 실패 intvId={request.intvId}: {e}", exc_info=True)
+            payload = QuestionCallbackPayload(
+                intvId=request.intvId,
+                status="FAILED",
+                questions=[],
+                errorMessage=f"[PDF_EXTRACT_ERROR] {e}",
+            )
+
+        except LLMStructuringError as e:
+            logger.error(f"질문 생성 실패 intvId={request.intvId}: {e}", exc_info=True)
+            payload = QuestionCallbackPayload(
+                intvId=request.intvId,
+                status="FAILED",
+                questions=[],
+                errorMessage=f"[LLM_STRUCTURING_ERROR] {e}",
+            )
+
+        except LLMGenerationError as e:
+            logger.error(f"질문 생성 실패 intvId={request.intvId}: {e}", exc_info=True)
+            payload = QuestionCallbackPayload(
+                intvId=request.intvId,
+                status="FAILED",
+                questions=[],
+                errorMessage=f"[LLM_GENERATION_ERROR] {e}",
+            )
+
+        except Exception as e:
+            logger.error(f"질문 생성 실패 intvId={request.intvId}: {e}", exc_info=True)
+            payload = QuestionCallbackPayload(
+                intvId=request.intvId,
+                status="FAILED",
+                questions=[],
+                errorMessage=f"[UNKNOWN_ERROR] {e}",
             )
 
         finally:
-            # 8. 성공/실패 무관하게 반드시 콜백 전송
-            # 콜백 자체 실패도 로깅만 하고 삼킴 (Spring 무한 대기 방지)
             try:
                 await self._callback.send(
                     url=settings.QUESTION_SPRING_WEBHOOK_URL,

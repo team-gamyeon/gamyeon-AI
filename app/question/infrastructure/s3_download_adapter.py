@@ -3,6 +3,7 @@ import aioboto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from app.core.config import settings
 from app.question.application.port.s3_download_port import S3DownloadPort
+from app.question.exception import S3DownloadError 
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,10 @@ class S3DownloadAdapter(S3DownloadPort):
                 return file_data
 
         except ClientError as e:
-            logger.error(f"S3 클라이언트 에러: {e}")
             error_code = e.response["Error"]["Code"]
+            logger.error(f"S3 클라이언트 에러: {e}")
+            raise S3DownloadError(f"S3 에러: {error_code} / {file_key}") from e
+            
             if error_code == "NoSuchKey":
                 raise ValueError(f"S3 파일 없음: {file_key}") from e
             elif error_code == "AccessDenied":
@@ -40,7 +43,7 @@ class S3DownloadAdapter(S3DownloadPort):
 
         except NoCredentialsError:
             logger.error("AWS 자격증명 없음")
-            raise ValueError("AWS 설정 확인") from None
+            raise ValueError("AWS 설정 확인") from e
 
         except Exception as e:
             logger.error(f"S3 다운로드 실패: {e}")

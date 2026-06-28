@@ -1,4 +1,3 @@
-# callback_receiver.py
 import json
 from datetime import datetime
 
@@ -6,13 +5,18 @@ import uvicorn
 from fastapi import FastAPI, Request
 
 app = FastAPI()
-# 스프링 섭를 대신하여 웹훅을 받는 코드, 9000
+
+# ✅ 추가: 전역 변수 초기화
+received_data = {"received": False, "payload": None}
 
 
 @app.post("/internal/v1/questions/callback")
 async def receive_question_callback(request: Request):
+    global received_data
     now = datetime.now()
     body = await request.json()
+
+    received_data = {"received": True, "payload": body}  # ✅ 추가
 
     print("🟢 WEBHOOK 수신 성공!")
     print("  📋 Payload:", body)
@@ -25,7 +29,6 @@ async def receive_question_callback(request: Request):
     return {"status": "received"}
 
 
-# 리포트 생성요청 테스트
 @app.post("/internal/v1/reports/callback")
 async def receive_callback(request: Request):
     body = await request.json()
@@ -45,18 +48,17 @@ async def receive_feedback_callback(request: Request):
     print("\n" + "=" * 60)
     print("✅ 피드백 콜백 수신!")
     print(json.dumps(body, ensure_ascii=False, indent=2))
-
     print("=" * 60)
     print("현재 시간:", now)
     return {"ok": True}
 
 
-@app.get("/received")  # ← 폴링용 엔드포인트 추가
+@app.get("/received")
 async def get_received():
     return received_data
 
 
-@app.post("/reset")  # ← 초기화용 엔드포인트 추가
+@app.post("/reset")
 async def reset_received():
     global received_data
     received_data = {"received": False, "payload": None}

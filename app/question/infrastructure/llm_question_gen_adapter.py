@@ -4,6 +4,8 @@ from langchain_core.output_parsers import StrOutputParser
 from app.question.application.port.question_gen_port import QuestionGenPort
 from app.question.domain.interview_input import InterviewInput
 from app.question.infrastructure.question_gen_prompt_provider import QuestionGenPromptProvider
+from app.question.exception import LLMGenerationError
+
 
 
 class LLMQuestionGenAdapter(QuestionGenPort):
@@ -16,9 +18,12 @@ class LLMQuestionGenAdapter(QuestionGenPort):
         self._chain = prompt | llm | StrOutputParser()
 
     async def generate(self, interview_input: InterviewInput) -> list[str]:
-        result = await self._chain.ainvoke(self._build_variables(interview_input))
-        questions = [q.strip() for q in result.split("\n") if q.strip()]
-        return questions[:4]
+        try:
+            result = await self._chain.ainvoke(self._build_variables(interview_input))
+            questions = [q.strip() for q in result.split("\n") if q.strip()]
+            return questions[:4]
+        except Exception as e:
+            raise LLMGenerationError(f"질문 생성 중 오류가 발생했습니다: {e}") from e
 
     @staticmethod
     def _build_variables(i: InterviewInput) -> dict:
