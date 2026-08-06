@@ -51,5 +51,8 @@ class Settings(BaseSettings):
         "http://spring-server:8080/internal/v1/questions/callback"
     )
 
+    # ── 내부 서버 간 인증 ─────────────────────────────────────────
+    INTERNAL_API_KEY: str = ""
+
 
 settings = Settings()

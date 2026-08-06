@@ -51,8 +51,11 @@ class WebhookSender:
         WebhookSender 코드 변경 없음
     """
 
-    def __init__(self, policy: RetryPolicy | None = None) -> None:
+    def __init__(
+        self, policy: RetryPolicy | None = None, internal_api_key: str = ""
+    ) -> None:
         self._policy = policy or RetryPolicy()
+        self._internal_api_key = internal_api_key
 
     async def send(self, url: str, payload: dict[str, Any], target: str) -> None:
         """
@@ -117,7 +120,10 @@ class WebhookSender:
                 response = await client.post(
                     url,
                     json=payload,
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Internal-API-Key": self._internal_api_key,
+                    },
                 )
 
                 if response.status_code >= 500:

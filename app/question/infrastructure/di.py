@@ -57,4 +57,4 @@ def _get_question_gen_port() -> QuestionGenPort:
 
 
 def _get_callback_port() -> CallbackPort:
-    return WebhookCallbackAdapter(sender=WebhookSender())
+    return WebhookCallbackAdapter(sender=WebhookSender(internal_api_key=settings.INTERNAL_API_KEY))

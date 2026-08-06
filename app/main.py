@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.schema import ApiResponse
 from app.feedback.infrastructure.di import get_feedback_service
@@ -21,6 +22,8 @@ from app.report.router import router as report_router
 load_dotenv()
 setup_logging()
 
+INTERNAL_PATH_PREFIX = "/internal/"
+INTERNAL_API_KEY_HEADER = "X-Internal-API-Key"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,6 +59,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── 내부 API 인증 미들웨어 ────────────────────────────────────────
+@app.middleware("http")
+async def internal_api_key_middleware(request: Request, call_next):
+    if request.url.path.startswith(INTERNAL_PATH_PREFIX):
+        key = request.headers.get(INTERNAL_API_KEY_HEADER)
+        if key != settings.INTERNAL_API_KEY:
+            logger.warning(
+                "internal_api_key_rejected path=%s",
+                request.url.path,
+            )
+            return JSONResponse(
+                status_code=401,
+                content=ApiResponse(
+                    success=False,
+                    code="CMMN-U001",
+                    message="유효하지 않은 내부 API 키입니다.",
+                    data=None,
+                ).model_dump(),
+            )
+    return await call_next(request)
 
 # ── 헬스체크 ─────────────────────────────────────────────────────
 @app.get("/health")
