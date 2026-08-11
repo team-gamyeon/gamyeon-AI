@@ -19,7 +19,10 @@ class SpringWebhookAdapter(ResultWebhookPort):
     """
 
     def __init__(self, policy: RetryPolicy | None = None) -> None:
-        self._sender = WebhookSender(policy=policy or RetryPolicy())
+        self._sender = WebhookSender(
+            policy=policy or RetryPolicy(),
+            internal_api_key=settings.INTERNAL_API_KEY,
+        )
 
     async def send_success(self, result: MediaProcessingResult) -> None:
         """
