@@ -45,6 +45,6 @@ def get_feedback_service() -> FeedbackService:
         prompt_provider=FeedbackPromptProvider(),
         semaphore=get_llm_semaphore(),
     )
-    sender = WebhookSender()
+    sender = WebhookSender(internal_api_key=settings.INTERNAL_API_KEY)
     callback = FeedbackWebhookCallbackAdapter(sender)
     return FeedbackService(feedback_port=port, callback=callback)

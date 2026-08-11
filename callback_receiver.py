@@ -1,4 +1,6 @@
 # callback_receiver.py
+
+#PS C:\Users\user\Documents\GitHub\gamyeon-AI> uv run python callback_receiver.py   
 import json
 from datetime import datetime
 
@@ -29,6 +31,8 @@ async def receive_question_callback(request: Request):
 @app.post("/internal/v1/reports/callback")
 async def receive_callback(request: Request):
     body = await request.json()
+    api_key = request.headers.get("X-Internal-API-Key")
+    print("🔑 수신된 API Key:", api_key) 
     now = datetime.now()
     print("\n" + "=" * 60)
     print("✅ 콜백 수신!")
@@ -36,6 +40,7 @@ async def receive_callback(request: Request):
     print(json.dumps(body, ensure_ascii=False, indent=2))
     print("=" * 60)
     return {"ok": True}
+
 
 
 @app.post("/internal/v1/feedbacks/callback")

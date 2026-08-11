@@ -4,10 +4,11 @@ from app.report.application.service import ReportService
 from app.report.infrastructure.static_score_adapter import StaticScoreAdapter
 from app.report.infrastructure.webhook_callback_adapter import WebhookCallbackAdapter
 from app.core.webhook.webhook_sender import WebhookSender
+from app.core.config import settings
 
 @lru_cache
 def get_webhook_sender() -> WebhookSender:
-    return WebhookSender()
+    return WebhookSender(internal_api_key=settings.INTERNAL_API_KEY)
 
 @lru_cache
 def get_callback_adapter() -> WebhookCallbackAdapter:
