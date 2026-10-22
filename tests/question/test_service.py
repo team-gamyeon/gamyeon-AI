@@ -83,8 +83,8 @@ class TestResumeMandatory:
         assert payload.questions == []
 
     @pytest.mark.asyncio
-    async def test_self_introduction_only_sends_failed_callback(self, service, mock_callback):
-        await service.run(make_request(["SELF_INTRODUCTION"]))
+    async def test_cover_letter_only_sends_failed_callback(self, service, mock_callback):
+        await service.run(make_request(["COVER_LETTER"]))
 
         payload = mock_callback.send.call_args.kwargs["payload"]
         assert payload.status == "FAILED"
@@ -101,7 +101,7 @@ class TestResumeMandatory:
 
     @pytest.mark.asyncio
     async def test_resume_with_optional_files_succeeds(self, service, mock_callback):
-        await service.run(make_request(["RESUME", "PORTFOLIO", "SELF_INTRODUCTION"]))
+        await service.run(make_request(["RESUME", "PORTFOLIO", "COVER_LETTER"]))
 
         payload = mock_callback.send.call_args.kwargs["payload"]
         assert payload.status == "SUCCESS"

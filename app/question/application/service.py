@@ -37,7 +37,7 @@ class QuestionService:
                 raise ValueError("RESUME file not found in request.files")
 
             portfolio_key = request.get_file_key("PORTFOLIO")
-            self_intro_key = request.get_file_key("SELF_INTRODUCTION")
+            self_intro_key = request.get_file_key("COVER_LETTER")
 
             # 2. S3 다운로드 (이력서 필수, 나머지는 선택)
             resume_bytes = await self._s3.download(resume_key)

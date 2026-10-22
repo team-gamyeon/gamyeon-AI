@@ -7,7 +7,7 @@ from pydantic.alias_generators import to_camel
 
 
 class FileEntry(BaseModel):
-    fileType: Literal["RESUME", "PORTFOLIO", "SELF_INTRODUCTION"]
+    fileType: Literal["RESUME", "PORTFOLIO", "COVER_LETTER"]
     fileKey: str
 
 
@@ -18,11 +18,6 @@ class QuestionGenerateRequest(BaseModel):
     )
     intvId: int
     files: list[FileEntry]
-    # ↓ 아래 필드 전부 삭제 (files[]로 통합되었음)
-    # resume_url: str               ← 삭제
-    # portfolio_url: str | None     ← 삭제
-    # self_introduction_url: str | None ← 삭제
-    # job_role: str | None          ← 삭제
 
     def get_file_key(self, file_type: str) -> str | None:
         for f in self.files:

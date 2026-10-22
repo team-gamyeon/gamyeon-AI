@@ -29,5 +29,5 @@ class LLMQuestionGenAdapter(QuestionGenPort):
             "work_experiences_section":   f"주요 경력:\n" + "\n".join(i.work_experiences) + "\n\n" if i.work_experiences else "",
             "projects_section":           f"프로젝트:\n" + "\n".join(i.projects) + "\n\n" if i.projects else "",
             "portfolio_section":          f"포트폴리오 요약: {i.portfolio_summary}\n\n" if i.portfolio_summary else "",
-            "self_intro_section":         f"자기소개서 요약: {i.self_introduction_summary}\n\n" if i.self_introduction_summary else "",
+            "self_intro_section":         f"자기소개서 요약: {i.cover_letter_summary}\n\n" if i.cover_letter_summary else "",
         }

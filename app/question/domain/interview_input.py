@@ -8,4 +8,4 @@ class InterviewInput(BaseModel):
     work_experiences: list[str] = []             # 주요 경력 목록
     projects: list[str] = []                     # 프로젝트/작업물 요약 목록
     portfolio_summary: str | None = None         # 포트폴리오 요약
-    self_introduction_summary: str | None = None # 자기소개서 요약
+    cover_letter_summary: str | None = None # 자기소개서 요약
